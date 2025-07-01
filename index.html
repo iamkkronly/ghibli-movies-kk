@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Studio Ghibli Films</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f8ff;
+      margin: 0;
+      padding: 20px;
+      color: #333;
+    }
+
+    h1 {
+      text-align: center;
+      color: #2c3e50;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 20px;
+      margin: 20px auto;
+    }
+
+    #searchInput, #sortSelect {
+      padding: 10px;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      width: 250px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .films-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      margin-top: 20px;
+    }
+
+    .film-card {
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      padding: 20px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      transition: transform 0.2s ease;
+      cursor: pointer;
+    }
+
+    .film-card:hover {
+      transform: scale(1.02);
+    }
+
+    .film-title {
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: #2c3e50;
+      margin-bottom: 8px;
+    }
+
+    .film-info {
+      font-size: 0.9rem;
+      margin-top: 4px;
+      color: #555;
+    }
+
+    #loading {
+      text-align: center;
+      font-style: italic;
+      margin-top: 40px;
+      color: #666;
+    }
+
+    /* Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 99;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0,0,0,0.6);
+    }
+
+    .modal-content {
+      background-color: #fff;
+      margin: 8% auto;
+      padding: 20px;
+      border: 1px solid #ccc;
+      width: 90%;
+      max-width: 600px;
+      border-radius: 10px;
+      position: relative;
+    }
+
+    .close {
+      position: absolute;
+      right: 15px;
+      top: 10px;
+      font-size: 24px;
+      color: #888;
+      cursor: pointer;
+    }
+
+    .modal h2 {
+      margin-top: 0;
+    }
+
+  </style>
+</head>
+<body>
+
+  <h1>🎬 Studio Ghibli Films</h1>
+
+  <div class="controls">
+    <input type="text" id="searchInput" placeholder="Search title, director, year...">
+    <select id="sortSelect">
+      <option value="">Sort by</option>
+      <option value="title">Title (A–Z)</option>
+      <option value="year">Year (Oldest–Newest)</option>
+    </select>
+  </div>
+
+  <div id="loading">Loading films...</div>
+  <div class="films-container" id="films"></div>
+
+  <!-- Modal -->
+  <div class="modal" id="filmModal">
+    <div class="modal-content">
+      <span class="close" id="closeModal">&times;</span>
+      <h2 id="modalTitle"></h2>
+      <p><strong>Director:</strong> <span id="modalDirector"></span></p>
+      <p><strong>Producer:</strong> <span id="modalProducer"></span></p>
+      <p><strong>Release Year:</strong> <span id="modalYear"></span></p>
+      <p><strong>Running Time:</strong> <span id="modalRuntime"></span> minutes</p>
+      <p><strong>Score:</strong> <span id="modalScore"></span></p>
+      <p id="modalDescription"></p>
+    </div>
+  </div>
+
+  <script>
+    let allFilms = [];
+
+    const filmContainer = document.getElementById('films');
+    const searchInput = document.getElementById('searchInput');
+    const sortSelect = document.getElementById('sortSelect');
+
+    const modal = document.getElementById('filmModal');
+    const closeModal = document.getElementById('closeModal');
+
+    function displayFilms(films) {
+      filmContainer.innerHTML = '';
+
+      films.forEach(film => {
+        const card = document.createElement('div');
+        card.className = 'film-card';
+        card.addEventListener('click', () => showModal(film));
+
+        const title = document.createElement('div');
+        title.className = 'film-title';
+        title.textContent = film.title;
+
+        const director = document.createElement('div');
+        director.className = 'film-info';
+        director.textContent = `Director: ${film.director}`;
+
+        const year = document.createElement('div');
+        year.className = 'film-info';
+        year.textContent = `Year: ${film.release_date}`;
+
+        card.appendChild(title);
+        card.appendChild(director);
+        card.appendChild(year);
+
+        filmContainer.appendChild(card);
+      });
+    }
+
+    function showModal(film) {
+      document.getElementById('modalTitle').textContent = film.title;
+      document.getElementById('modalDirector').textContent = film.director;
+      document.getElementById('modalProducer').textContent = film.producer;
+      document.getElementById('modalYear').textContent = film.release_date;
+      document.getElementById('modalRuntime').textContent = film.running_time;
+      document.getElementById('modalScore').textContent = film.rt_score;
+      document.getElementById('modalDescription').textContent = film.description;
+      modal.style.display = 'block';
+    }
+
+    closeModal.onclick = () => {
+      modal.style.display = 'none';
+    };
+
+    window.onclick = (event) => {
+      if (event.target == modal) {
+        modal.style.display = 'none';
+      }
+    };
+
+    function filterAndSortFilms() {
+      const query = searchInput.value.toLowerCase();
+      const sort = sortSelect.value;
+
+      let filtered = allFilms.filter(film =>
+        film.title.toLowerCase().includes(query) ||
+        film.director.toLowerCase().includes(query) ||
+        film.release_date.includes(query)
+      );
+
+      if (sort === 'title') {
+        filtered.sort((a, b) => a.title.localeCompare(b.title));
+      } else if (sort === 'year') {
+        filtered.sort((a, b) => parseInt(a.release_date) - parseInt(b.release_date));
+      }
+
+      displayFilms(filtered);
+    }
+
+    fetch('https://ghibliapi.vercel.app/films')
+      .then(res => res.json())
+      .then(data => {
+        allFilms = data;
+        document.getElementById('loading').style.display = 'none';
+        displayFilms(allFilms);
+      })
+      .catch(err => {
+        document.getElementById('loading').textContent = "Failed to load films.";
+        console.error(err);
+      });
+
+    searchInput.addEventListener('input', filterAndSortFilms);
+    sortSelect.addEventListener('change', filterAndSortFilms);
+  </script>
+
+</body>
+</html>
